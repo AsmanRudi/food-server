@@ -29,45 +29,47 @@ const normalizeResource = (resource, subjectName = 'Resource') => {
     return subject(subjectName, normalized);
 };
 
-// policy
-const policies = {
-    guest(user, { can }) {
-        can('read', 'Product');
-        can('view', 'DeliveryAddress');
-    },
+const definePolicy = (user, can) => {
+    const currentUser = user || {};
+    const role = currentUser.role || 'guest';
 
-    user(user, { can }) {
+    if (role === 'admin') {
+        can('manage', 'all');
+        return;
+    }
+
+    if (role === 'user') {
         can('view', 'Order');
         can('create', 'Order');
-        can('read', 'Order', { user_id: user._id });
-        can('update', 'User', { _id: user._id });
-        can('read', 'Cart', { user_id: user._id });
-        can('update', 'Cart', { user_id: user._id });
+        can('read', 'Order', { user_id: currentUser._id });
+        can('update', 'User', { _id: currentUser._id });
+        can('read', 'Cart', { user_id: currentUser._id });
+        can('update', 'Cart', { user_id: currentUser._id });
         can('view', 'DeliveryAddress');
-        can('create', 'DeliveryAddress', { user_id: user._id });
-        can('read', 'DeliveryAddress', { user_id: user._id });
-        can('update', 'DeliveryAddress', { user_id: user._id });
-        can('delete', 'DeliveryAddress', { user_id: user._id });
-        can('read', 'Invoice', { user_id: user._id });
-    },
-
-    admin(user, { can }) {
-        can('manage', 'all');
+        can('create', 'DeliveryAddress', { user_id: currentUser._id });
+        can('read', 'DeliveryAddress', { user_id: currentUser._id });
+        can('update', 'DeliveryAddress', { user_id: currentUser._id });
+        can('delete', 'DeliveryAddress', { user_id: currentUser._id });
+        can('read', 'Invoice', { user_id: currentUser._id });
+        return;
     }
+
+    can('read', 'Product');
+    can('view', 'DeliveryAddress');
 };
 
-const policyfor = (user) => {
+const policyFor = (user = {}) => {
     const builder = new AbilityBuilder(createMongoAbility);
-    const role = user && user.role ? user.role : 'guest';
-    const selectedPolicy = policies[role] || policies.guest;
-
-    selectedPolicy(user || {}, builder);
-
+    definePolicy(user, builder.can.bind(builder));
     return builder.build();
 };
+
+const policyfor = (user) => policyFor(user);
 
 module.exports = {
     getToken,
     policyfor,
+    policyFor,
+    definePolicy,
     normalizeResource
 };

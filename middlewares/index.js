@@ -1,4 +1,4 @@
-const { getToken, policyfor, normalizeResource } = require('../utils');
+const { getToken, policyFor, normalizeResource } = require('../utils');
 const jwt = require('jsonwebtoken');
 const config = require('../app/config');
 const User = require('../app/user/model');
@@ -39,7 +39,7 @@ function decodeToken() {
 function police_check(action, subjectName, resourceResolver) {
     return async function (req, res, next) {
         try {
-            const ability = policyfor(req.user);
+            const ability = policyFor(req.user);
             let target = subjectName;
 
             if (typeof resourceResolver === 'function') {
