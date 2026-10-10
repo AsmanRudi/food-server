@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
-const { timeStamp } = require('node:console');
 const { model, Schema } = mongoose;
 
-const invoiceSchema = Schema({
-
+const invoiceSchema = new Schema({
     sub_total: {
         type: Number,
         required: [true, 'sub_total harus diisi'],
@@ -15,11 +13,11 @@ const invoiceSchema = Schema({
     },
 
     delivery_address: {
-        provinsi: { type: String, required: [true, 'provinsi harus diisi.']},
-        kabupaten: { type: String, required: [true, 'kabupaten harus diisi.']},
-        kecamatan: { type: String, required: [true, 'kecamatan harus diisi.']},
-        kelurahaan: { type: String, required: [true, 'kelurahan harus diisi.']},
-        detail: {type: String}
+        provinsi: { type: String, required: [true, 'provinsi harus diisi.'] },
+        kabupaten: { type: String, required: [true, 'kabupaten harus diisi.'] },
+        kecamatan: { type: String, required: [true, 'kecamatan harus diisi.'] },
+        kelurahan: { type: String, required: [true, 'kelurahan harus diisi.'] },
+        detail: { type: String }
     },
 
     total: {
@@ -29,9 +27,17 @@ const invoiceSchema = Schema({
 
     payment_status: {
         type: String,
-        enum: ['waiting_payment', 'paid'],
+        enum: ['waiting_payment', 'cod_due', 'paid', 'failed'],
         default: 'waiting_payment'
     },
+
+    payment_method: {
+        type: String,
+        enum: ['cod', 'bank_transfer', 'midtrans'],
+        default: 'bank_transfer'
+    },
+
+    payment_url: String,
 
     user: {
         type: Schema.Types.ObjectId,
@@ -42,10 +48,7 @@ const invoiceSchema = Schema({
         type: Schema.Types.ObjectId,
         ref: 'Order'
     }
-
-}, {timeStamp: true});
+}, { timestamps: true });
 
 module.exports = model('Invoice', invoiceSchema);
-
-
 

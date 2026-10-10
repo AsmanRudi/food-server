@@ -1,74 +1,76 @@
 const Product = require('../product/model');
 const CartItem = require('../cart-item/model');
 
-
-const update = async(req, res, next) => {
+const update = async (req, res, next) => {
     try {
-        const {items} = req.body;
-        const productIds = items.map(item => item.product._id);
-        const product = await Product.find({_id: {$in: productIds}});
-        let cartItems = items.map(item => {
-            let relatedProduct = productIds.find(product => product._id.toString() === item.product._id);
-            return {
-                product: relatedProduct._id,
-                price: relatedProduct.price,
-                image_url: relatedProduct.image_url,
-                name: relatedProduct.name,
-                user: req.user._id,
-                qty: item.qty
+        const items = Array.isArray(req.body.items) ? req.body.items : [];
+
+        const productIds = items
+            .map(item => item.product?._id || item.product)
+            .filter(Boolean);
+
+        const products = await Product.find({ _id: { $in: productIds } });
+        const productMap = new Map(products.map(product => [String(product._id), product]));
+
+        const cartItems = items.map((item) => {
+            const productId = String(item.product?._id || item.product);
+            const product = productMap.get(productId);
+
+            if (!product) {
+                throw new Error(`Product not found: ${productId}`);
             }
+
+            return {
+                product: product._id,
+                price: Number(product.price || 0),
+                image_url: product.image_url,
+                name: product.name,
+                user: req.user._id,
+                qty: Number(item.qty || 0)
+            };
         });
 
-        await CartItem.deleteMany({user: req.user._id});
-        await CartItem.bulkwrite(cartItems.map(items => {
-            return {
-                updateOne: {
-                    filter: {
-                        user: req.user._id,
-                        product: item.product
-                    },
-                    update: item,
-                    upsert: true
-                }
-            }
-        }));
+        await CartItem.deleteMany({ user: req.user._id });
+        if (!cartItems.length) {
+            return res.json([]);
+        }
+        const inserted = await CartItem.insertMany(cartItems);
 
-        return res.json(cartItems);
-
+        return res.json(inserted);
     } catch (err) {
-        if( err && err.name == 'ValidationError'){
-            return res.json({
+        if (err && err.name === 'ValidationError') {
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
-                fields: err.errors                
+                fields: err.errors
             });
         }
-        next(err)
+
+        return next(err);
     }
-}
+};
 
 const index = async (req, res, next) => {
     try {
-        let items = 
-        await CartItem
-        .find({user: req.user._id})
-        .populate('product');
+        const items = await CartItem
+            .find({ user: req.user._id })
+            .populate('product');
 
         return res.json(items);
     } catch (err) {
-        if(err && err.name == 'ValidationError'){
-             return res.json({
+        if (err && err.name === 'ValidationError') {
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
-                fields: err.errors                
+                fields: err.errors
             });
         }
 
-        next(err)
+        return next(err);
     }
-    
-}
+};
+
 module.exports = {
     update,
     index
-}
+};

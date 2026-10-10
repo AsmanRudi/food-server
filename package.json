@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "SET DEBUG=eduwork-server* && nodemon ./bin/www"
+    "start": "node ./bin/www",
+    "dev": "node ./bin/www",
+    "test": "node --test test/*.js"
   },
   "dependencies": {
     "@casl/ability": "^7.0.1",
@@ -15,6 +17,7 @@
     "express": "~4.16.1",
     "http-errors": "~1.6.3",
     "jsonwebtoken": "^9.0.3",
+    "midtrans-client": "^1.4.3",
     "mongoose": "^8.19.1",
     "mongoose-sequence": "^6.0.1",
     "mongose": "^0.0.2-security",

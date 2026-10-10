@@ -69,7 +69,7 @@ const store = async (req, res, next) => {
             const dest = fs.createWriteStream(target_path);
             src.pipe(dest);
 
-            src.on('end', async () => {
+            src.on('finish', async () => {
                 try {
                     let product = new Product({ ...payload, image_url: filename });
                     await product.save();
@@ -243,7 +243,7 @@ const index = async (req, res, next) => {
             }
         }
         //untuk tampilan Count total data yang ada di database, tidak hanya data yang ditampilkan
-        let count = await Product.find().countDocuments();
+        let count = await Product.find().countDocuments(criteria);
         
 
         let product = await Product

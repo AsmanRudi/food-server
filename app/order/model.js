@@ -11,6 +11,12 @@ const orderSchema = new Schema({
         default: 'waiting_payment'
     },
 
+    payment_method: {
+        type: String,
+        enum: ['cod', 'bank_transfer', 'midtrans'],
+        default: 'cod'
+    },
+
     delivery_fee: {
         type: Number,
         default: 0

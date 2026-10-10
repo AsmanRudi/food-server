@@ -28,10 +28,10 @@ const productSchema = new Schema({
         default: null
     },
 
-    tags: {
-        type: Schema.Types.ObjectId,
-        ref: 'Tag',
-    }
+    tags: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Tag'
+}]
 
     
 }, { timestamps: true });

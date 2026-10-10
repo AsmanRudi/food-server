@@ -11,6 +11,16 @@ module.exports = {
   dbName: process.env.DB_NAME,
   secretKey: process.env.SECRET_KEY,
   serviceName: process.env.SERVICE_NAME,
+  bankTransfer: {
+    bank: process.env.BANK_TRANSFER_BANK || '',
+    accountName: process.env.BANK_TRANSFER_ACCOUNT_NAME || '',
+    accountNumber: process.env.BANK_TRANSFER_ACCOUNT_NUMBER || ''
+  },
+  midtrans: {
+    serverKey: process.env.MIDTRANS_SERVER_KEY || '',
+    clientKey: process.env.MIDTRANS_CLIENT_KEY || '',
+    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true'
+  },
 
   rootPath: path.resolve(__dirname, '..'),
 };

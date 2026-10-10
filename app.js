@@ -13,6 +13,7 @@ const deliveryAddressRoute = require('./app/DeliveryAddress/router');
 const cartRoute = require('./app/cart/router');
 const orderRoute = require('./app/order/router');
 const invoiceRoute = require('./app/invoice/router');
+const paymentRoute = require('./app/payment/router');
 
 
 
@@ -22,8 +23,8 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
-app.use(decodeToken());
 app.use(cors());
+app.use(decodeToken());
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -39,6 +40,7 @@ app.use('/api', deliveryAddressRoute);
 app.use('/api', cartRoute);
 app.use('/api', orderRoute);
 app.use('/api', invoiceRoute);
+app.use('/api', paymentRoute);
 // home
 app.use('/', function(req, res) {
   res.render('index', {
