@@ -29,6 +29,7 @@ export default function ManageProducts() {
   const [success, setSuccess] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [imagePreviewFailed, setImagePreviewFailed] = useState(false);
 
   async function loadProducts() {
     setLoading(true);
@@ -51,6 +52,9 @@ export default function ManageProducts() {
   function openAdd() {
     setEditingId(null);
     setForm(initialForm);
+    setImageFile(null);
+    setImagePreview("");
+    setImagePreviewFailed(false);
     setShowForm(true);
     setError("");
     setSuccess("");
@@ -67,6 +71,7 @@ export default function ManageProducts() {
 
     setImageFile(null);
     setImagePreview(product.image_url ? getImageUrl(product.image_url) : "");
+    setImagePreviewFailed(false);
 
     setShowForm(true);
     setError("");
@@ -102,6 +107,7 @@ export default function ManageProducts() {
       setEditingId(null);
       setImageFile(null);
       setImagePreview("");
+      setImagePreviewFailed(false);
 
       await loadProducts();
     } catch (err) {
@@ -375,6 +381,7 @@ export default function ManageProducts() {
       setError("");
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+      setImagePreviewFailed(false);
     }}
   />
 
@@ -383,7 +390,14 @@ export default function ManageProducts() {
       src={imagePreview}
       alt="Preview produk"
       className="h-36 w-36 rounded-xl border object-cover"
+      onError={() => setImagePreviewFailed(true)}
     />
+  )}
+
+  {imagePreviewFailed && (
+    <p className="text-sm text-amber-700">
+      Gambar lama tidak dapat dimuat. Pilih gambar baru untuk menggantinya.
+    </p>
   )}
 
   {editingId && !imageFile && (
