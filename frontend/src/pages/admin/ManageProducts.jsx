@@ -8,10 +8,12 @@ import {
     updateProduct,
 } from "../../services/product.service";
 
+
 const initialForm = {
   name: "",
   description: "",
   price: "",
+  stock: "",
 };
 
 export default function ManageProducts() {
@@ -24,6 +26,8 @@ export default function ManageProducts() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   async function loadProducts() {
     setLoading(true);
@@ -57,7 +61,12 @@ export default function ManageProducts() {
       name: product.name || "",
       description: product.description || "",
       price: String(product.price ?? ""),
+      stock: String(product.stock ?? ""),
     });
+
+    setImageFile(null);
+    setImagePreview(product.image_url || "");
+
     setShowForm(true);
     setError("");
     setSuccess("");
@@ -74,11 +83,17 @@ export default function ManageProducts() {
       data.append("name", form.name.trim());
       data.append("description", form.description);
       data.append("price", String(Number(form.price)));
+      data.append("stock", String(Number(form.stock)));
+
+      // Kirim gambar hanya jika pengguna memilih gambar baru.
+      if (imageFile) {
+        data.append(image, imageFile);
+      }
 
       if (editingId) {
         await updateProduct(editingId, data);
         setSuccess("Produk berhasil diperbarui.");
-      } else {
+      } else { 
         await createProduct(data);
         setSuccess("Produk berhasil ditambahkan.");
       }
@@ -86,9 +101,15 @@ export default function ManageProducts() {
       setShowForm(false);
       setForm(initialForm);
       setEditingId(null);
+      setImageFile(null);
+      setImagePreview("");
+
       await loadProducts();
     } catch (err) {
-      setError(err.message || "Gagal menyimpan produk.");
+        setError (
+            err.response?.data?.message ||
+        err.message || "Gagal menyimpan produk."
+        );
     } finally {
       setSaving(false);
     }
@@ -188,6 +209,8 @@ export default function ManageProducts() {
                 <tr>
                   <th className="p-4">Nama Produk</th>
                   <th className="p-4">Harga</th>
+                  <th className="p-4">Stock</th>
+                  <th className="p-4">Gambar</th>
                   <th className="p-4">Aksi</th>
                 </tr>
               </thead>
@@ -203,6 +226,29 @@ export default function ManageProducts() {
                     <td className="p-4 font-semibold">
                       {money(product.price)}
                     </td>
+
+                    <td className="p-4 font semibold">
+                        {product.stock ?? 0}
+                    </td>
+
+                    <td className="p-4">
+                     {product.image_url ? (
+                        <img
+                             src={product.image_url}
+                             alt={product.name}
+                             className="h-12 w-12 rounded-lg object-cover"
+                         />
+                      ) : (
+    <span className="text-slate-400">Belum ada gambar</span>
+                         )}
+                    </td>
+
+                        <td className="p-4">
+                            <div className="flex gap-2">
+                               {/* Pertahankan tombol Edit dan Hapus yang sudah ada di sini */}
+                         </div>
+                    </td>
+
                     <td className="p-4">
                       <div className="flex gap-2">
                         <button
@@ -294,6 +340,63 @@ export default function ManageProducts() {
                   }
                 />
               </label>
+
+              <label className="grid gap-2 text-sm font-semibold">
+                Stok
+                <input required type="number"
+                    min="0"
+                    step="1"
+                    className="rounded-lg border p-3 font-normal"
+                    value={form.stock}
+                    onChange={(event) =>
+                        setForm({ ...form, stock: event.target.value })
+                    }
+                    />
+              </label>
+
+              <label className="grid gap-2 text-sm font-semibold">
+  Gambar Produk
+  <input
+    type="file"
+    accept="image/png,image/jpeg,image/webp"
+    className="rounded-lg border p-3 font-normal"
+    onChange={(event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setError("File harus berupa gambar.");
+        event.target.value = "";
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Ukuran gambar maksimal 5 MB.");
+        event.target.value = "";
+        return;
+      }
+
+      setError("");
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }}
+  />
+
+  {imagePreview && (
+    <img
+      src={imagePreview}
+      alt="Preview produk"
+      className="h-36 w-36 rounded-xl border object-cover"
+    />
+  )}
+
+  {editingId && !imageFile && (
+    <p className="text-xs text-slate-500">
+      Gambar lama tetap digunakan jika tidak memilih gambar baru.
+    </p>
+  )}
+</label>
+
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
