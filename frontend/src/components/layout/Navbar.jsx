@@ -1,4 +1,4 @@
-import { LogOut, Menu, Package, ShoppingCart, User } from "lucide-react";
+import { LogOut, Menu, Package, ShoppingCart, User, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
