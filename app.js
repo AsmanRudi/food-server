@@ -19,6 +19,22 @@ const paymentRoute = require('./app/payment/router');
 
 var app = express();
 
+
+const db = require('./database');
+
+app.use(async (req, res, next) => {
+  try {
+    await db.ready;
+    next();
+  } catch (err) {
+    console.error('Database unavailable:', err.message);
+    res.status(503).json({
+      error: 1,
+      message: 'Database temporarily unavailable',
+    });
+  }
+});
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
