@@ -58,12 +58,21 @@ app.use('/api', orderRoute);
 app.use('/api', invoiceRoute);
 app.use('/api', paymentRoute);
 // home
-app.use('/', function(req, res) {
-  res.render('index', {
-    title : 'Eduwork API service'
-  });
+// Serve React frontend built with Vite
+const frontendDist = path.join(__dirname, 'frontend', 'dist');
 
-})
+app.use(express.static(frontendDist));
+
+app.get('*', (req, res, next) => {
+  // Jangan mengirim HTML frontend untuk endpoint API yang tidak ditemukan
+  if (req.path.startsWith('/api') || req.path.startsWith('/auth')) {
+    return next();
+  }
+
+  res.sendFile(path.join(frontendDist, 'index.html'), (err) => {
+    if (err) next(err);
+  });
+});
 
 
 
@@ -105,4 +114,3 @@ app.use(function (err, req, res, next) {
 module.exports = app;
 
 
-module.exports = app;
