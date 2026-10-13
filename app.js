@@ -14,6 +14,8 @@ const cartRoute = require('./app/cart/router');
 const orderRoute = require('./app/order/router');
 const invoiceRoute = require('./app/invoice/router');
 const paymentRoute = require('./app/payment/router');
+const fs = require('fs');
+const path = require('path');
 
 
 
@@ -64,13 +66,29 @@ const frontendDist = path.join(__dirname, 'frontend', 'dist');
 app.use(express.static(frontendDist));
 
 app.get('*', (req, res, next) => {
-  // Jangan mengirim HTML frontend untuk endpoint API yang tidak ditemukan
+  // Jangan mengirim HTML frontend untuk endpoint API atau Auth yang tidak ditemukan
   if (req.path.startsWith('/api') || req.path.startsWith('/auth')) {
     return next();
   }
 
-  res.sendFile(path.join(frontendDist, 'index.html'), (err) => {
-    if (err) next(err);
+  const indexPath = path.join(frontendDist, 'index.html');
+
+  // Cek dulu apakah file index.html benar-benar ada di build Vercel
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error sending index.html:', err);
+        if (!res.headersSent) {
+          res.status(500).send('Error loading page');
+        }
+      }
+    });
+  }
+
+  // Fallback jika frontend/dist/index.html tidak ikut ter-build / tidak terikut ke Vercel
+  res.status(404).json({
+    success: false,
+    message: 'Frontend build file (index.html) not found on server.',
   });
 });
 
