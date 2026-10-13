@@ -16,11 +16,7 @@ const invoiceRoute = require('./app/invoice/router');
 const paymentRoute = require('./app/payment/router');
 const fs = require('fs');
 
-
-
-
 var app = express();
-
 
 const db = require('./database');
 
@@ -49,7 +45,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
+// Rute API & Auth
 app.use('/auth', authRoute);
 app.use('/api', productRoute);
 app.use('/api', categoryRoute);
@@ -59,53 +55,43 @@ app.use('/api', cartRoute);
 app.use('/api', orderRoute);
 app.use('/api', invoiceRoute);
 app.use('/api', paymentRoute);
-// home
-// Serve React frontend built with Vite
-const frontendDist = path.join(__dirname, 'frontend', 'dist');
 
+// Serve React Frontend (Vite)
+const frontendDist = path.join(__dirname, 'frontend', 'dist');
 app.use(express.static(frontendDist));
 
 app.get('*', (req, res, next) => {
-  // Jangan mengirim HTML frontend untuk endpoint API atau Auth yang tidak ditemukan
+  // Lewatkan endpoint API dan Auth yang tidak ditemukan ke error handler
   if (req.path.startsWith('/api') || req.path.startsWith('/auth')) {
-    return next();
+    return next(createError(404, 'API endpoint not found'));
   }
 
   const indexPath = path.join(frontendDist, 'index.html');
 
-  // Cek dulu apakah file index.html benar-benar ada di build Vercel
   if (fs.existsSync(indexPath)) {
     return res.sendFile(indexPath, (err) => {
-      if (err) {
+      if (err && !res.headersSent) {
         console.error('Error sending index.html:', err);
-        if (!res.headersSent) {
-          res.status(500).send('Error loading page');
-        }
+        res.status(500).send('Error loading page');
       }
     });
   }
 
-  // Fallback jika frontend/dist/index.html tidak ikut ter-build / tidak terikut ke Vercel
+  // Fallback jika frontend/dist/index.html belum ter-build
+  console.error('Frontend build missing at path:', indexPath);
   res.status(404).json({
     success: false,
     message: 'Frontend build file (index.html) not found on server.',
+    searchedPath: indexPath
   });
 });
 
-
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
-
-
+// Error Handler Terpusat
 app.use(function (err, req, res, next) {
   console.error('Application error:', err.stack || err);
 
   res.locals.message = err.message;
-  res.locals.error =
-    req.app.get('env') === 'development' ? err : {};
+  res.locals.error = req.app.get('env') === 'development' ? err : {};
 
   const status = err.status || err.statusCode || 500;
 
@@ -124,11 +110,8 @@ app.use(function (err, req, res, next) {
       console.error('Error rendering error.pug:', renderErr.message);
       return res.status(500).send('Internal Server Error');
     }
-
     return res.send(html);
   });
 });
 
 module.exports = app;
-
-
