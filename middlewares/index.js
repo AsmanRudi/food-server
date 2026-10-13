@@ -15,16 +15,16 @@ function decodeToken() {
             let user = await User.findOne({ token: { $in: [token] } });
 
             if (!user) {
-                return res.json({
+                return res.status(401).json({
                     error: 1,
-                    message: 'Token Expired'
+                    message: 'Token is invalid or expired'
                 });
             }
         } catch (err) {
-            if (err && err.name === 'JsonwebTokenError') {
-                return res.json({
+            if (err && ['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(err.name)) {
+                return res.status(401).json({
                     error: 1,
-                    message: err.message
+                    message: 'Token is invalid or expired'
                 });
             }
 

@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+process.env.SECRET_KEY = 'test-only-secret-key-long-enough-for-jwt';
 const { subject } = require('@casl/ability');
 
 const { policyfor } = require('../utils');
