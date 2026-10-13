@@ -1,4 +1,4 @@
-import { LogOut, Menu, ShoppingCart, User } from "lucide-react";
+import { LogOut, Menu, Package, ShoppingCart, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { logout } from "../../services/auth.service";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/cartStore";
+
 
 const Navbar = () => {
     const navigate = useNavigate();
@@ -102,6 +103,28 @@ const Navbar = () => {
                             className="font-medium text-orange-500">
                                 Admin
                             </Link>
+                        )}
+
+                        {user?.role === "admin" && (
+                            <>
+                                <Link 
+                                    to="/admin/ManageProducts"
+                                    className="flex items-center gap-2 transition hover:text-orange-500"
+                                    >
+                                        <Package size={17} />
+                                        <span>Kelola Produk</span>
+                            </Link>
+
+                            <Link
+                                to="/admin/ManageUsers"
+                                className="flex items-center gap-2 transition hover:text-orange-500"
+                            >
+                                <Users size={17} />
+                                    <span>Kelola User</span>
+                            
+                            </Link>
+                            </>
+                            
                         )}
                     </nav>
 
