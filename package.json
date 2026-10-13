@@ -6,6 +6,7 @@
     "start": "node ./bin/www",
     "dev": "node ./bin/www",
     "build": "cd frontend && npm install && npm run build",
+    "vercel-build": "cd frontend && npm install && npm run build",
     "test": "node --test test/*.js"
   },
   "dependencies": {
