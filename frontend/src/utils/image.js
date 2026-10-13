@@ -7,7 +7,11 @@ export const getImageUrl = (image) => {
         return image;
     }
 
-    const baseUrl = import.meta.env.VITE_IMAGE_URL || "";
+    const baseUrl = (
+        import.meta.env.VITE_IMAGE_URL ||
+        import.meta.env.VITE_API_URL ||
+        ""
+    ).replace(/\/$/, "");
     const imagePath = image.startsWith("/") ? image : `/images/${image}`;
 
     return `${baseUrl}${imagePath}`;

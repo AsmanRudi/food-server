@@ -7,6 +7,7 @@ import {
     getProducts,
     updateProduct,
 } from "../../services/product.service";
+import { getImageUrl } from "../../utils/image";
 
 
 const initialForm = {
@@ -65,7 +66,7 @@ export default function ManageProducts() {
     });
 
     setImageFile(null);
-    setImagePreview(product.image_url || "");
+    setImagePreview(product.image_url ? getImageUrl(product.image_url) : "");
 
     setShowForm(true);
     setError("");
@@ -84,11 +85,8 @@ export default function ManageProducts() {
       data.append("description", form.description);
       data.append("price", String(Number(form.price)));
       data.append("stock", String(Number(form.stock)));
-      data.append("image", imageFile);
-
-      // Kirim gambar hanya jika pengguna memilih gambar baru.
       if (imageFile) {
-        data.append(image, imageFile);
+        data.append("image", imageFile);
       }
 
       if (editingId) {
@@ -228,18 +226,14 @@ export default function ManageProducts() {
                       {money(product.price)}
                     </td>
 
-                    <td className="p-4 font semibold">
+                    <td className="p-4 font-semibold">
                         {product.stock ?? 0}
                     </td>
 
                     <td className="p-4">
                      {product.image_url ? (
                         <img
-                            src={
-                             product.image_url.startsWith("http")
-                            ? product.image_url
-                            : `${import.meta.env.VITE_API_URL}${product.image_url.startsWith("/") ? "" : "/"}${product.image_url}`
-                         }
+                            src={getImageUrl(product.image_url)}
                              alt={product.name}
                             className="h-12 w-12 rounded-lg object-cover"
                             onError={(event) => {
@@ -249,12 +243,6 @@ export default function ManageProducts() {
                             ) : (
                             <span className="text-slate-400">Belum ada gambar</span>
                         )}
-                    </td>
-
-                        <td className="p-4">
-                            <div className="flex gap-2">
-                               {/* Pertahankan tombol Edit dan Hapus yang sudah ada di sini */}
-                         </div>
                     </td>
 
                     <td className="p-4">
@@ -378,8 +366,8 @@ export default function ManageProducts() {
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Ukuran gambar maksimal 5 MB.");
+      if (file.size > 4 * 1024 * 1024) {
+        setError("Ukuran gambar maksimal 4 MB.");
         event.target.value = "";
         return;
       }
@@ -430,4 +418,3 @@ export default function ManageProducts() {
     </main>
   );
 }
-

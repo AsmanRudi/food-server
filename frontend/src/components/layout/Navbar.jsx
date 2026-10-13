@@ -108,7 +108,7 @@ const Navbar = () => {
                         {user?.role === "admin" && (
                             <>
                                 <Link 
-                                    to="/admin/Products"
+                                    to="/admin/products"
                                     className="flex items-center gap-2 transition hover:text-orange-500"
                                     >
                                         <Package size={17} />
@@ -116,7 +116,7 @@ const Navbar = () => {
                             </Link>
 
                             <Link
-                                to="/admin/Users"
+                                to="/admin/users"
                                 className="flex items-center gap-2 transition hover:text-orange-500"
                             >
                                 <Users size={17} />

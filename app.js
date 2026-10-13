@@ -14,6 +14,7 @@ const cartRoute = require('./app/cart/router');
 const orderRoute = require('./app/order/router');
 const invoiceRoute = require('./app/invoice/router');
 const paymentRoute = require('./app/payment/router');
+const userRoute = require('./app/user/router');
 const fs = require('fs');
 
 var app = express();
@@ -55,6 +56,7 @@ app.use('/api', cartRoute);
 app.use('/api', orderRoute);
 app.use('/api', invoiceRoute);
 app.use('/api', paymentRoute);
+app.use('/api', userRoute);
 
 // Serve React Frontend (Vite)
 const frontendDist = path.join(__dirname, 'frontend', 'dist');

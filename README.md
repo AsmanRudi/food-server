@@ -119,6 +119,20 @@ JWT_SECRET=ganti_dengan_secret_yang_kuat
 -   Jangan commit `.env` atau membagikan secret ke repository publik.
 -   Jangan gunakan contoh secret di atas untuk produksi.
 
+### Gambar produk di Vercel
+
+Upload produk di Vercel disimpan di Vercel Blob agar gambar tetap tersedia
+setelah function selesai. Buat Blob store dari tab **Storage** project Vercel
+dan hubungkan ke project backend untuk environment Production dan Preview.
+SDK menggunakan kredensial yang disediakan Vercel; jangan menaruh token Blob
+di source code.
+
+Frontend harus memiliki `VITE_API_URL` yang menunjuk ke URL backend tanpa
+akhiran `/api`. `VITE_IMAGE_URL` boleh diatur ke URL backend yang sama bila
+gambar statis lama disajikan dari backend. Gambar yang diunggah sebelum Blob
+diaktifkan tetap memerlukan file asalnya di `public/images`; upload baru
+disimpan sebagai URL Blob.
+
 ### 4. Jalankan backend
 
 Periksa bagian `scripts` pada `package.json` dan jalankan perintah yang

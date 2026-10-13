@@ -1,10 +1,6 @@
-
 import { RefreshCw, Search } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:3000"
-).replace(/\/$/, "");
+import { getUsers } from "../../services/user.service";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
@@ -17,30 +13,12 @@ export default function ManageUsers() {
     setError("");
 
     try {
-      const token =
-        localStorage.getItem("token") ||
-        localStorage.getItem("accessToken") ||
-        localStorage.getItem("access_token");
-
-      const response = await fetch(`${API_URL}/api/users`, {
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : {},
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || `HTTP ${response.status}`);
-      }
-
-      setUsers(
-        Array.isArray(result)
-          ? result
-          : result.data || result.users || []
-      );
+      const result = await getUsers();
+      setUsers(result.data || []);
     } catch (err) {
-      setError(err.message || "Gagal memuat pengguna.");
+      setError(
+        err.response?.data?.message || err.message || "Gagal memuat pengguna."
+      );
     } finally {
       setLoading(false);
     }
@@ -51,14 +29,7 @@ export default function ManageUsers() {
   }, []);
 
   const filteredUsers = users.filter((user) =>
-    [
-      user.full_name,
-      user.fullname,
-      user.name,
-      user.username,
-      user.email,
-      user.role,
-    ]
+    [user.full_name, user.email, user.role]
       .filter(Boolean)
       .join(" ")
       .toLowerCase()
@@ -81,7 +52,7 @@ export default function ManageUsers() {
         <button
           onClick={loadUsers}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold disabled:opacity-50"
         >
           <RefreshCw size={16} />
           Muat Ulang
@@ -91,9 +62,6 @@ export default function ManageUsers() {
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {error}
-          <p className="mt-1">
-            Periksa endpoint pengguna dan izin admin pada backend.
-          </p>
         </div>
       )}
 
@@ -125,20 +93,14 @@ export default function ManageUsers() {
               <tbody>
                 {filteredUsers.map((user) => (
                   <tr
-                    key={user._id || user.id}
+                    key={user._id}
                     className="border-b border-slate-100"
                   >
-                    <td className="p-4 font-semibold">
-                      {user.full_name ||
-                        user.fullname ||
-                        user.name ||
-                        user.username ||
-                        "-"}
-                    </td>
-                    <td className="p-4">{user.email || "-"}</td>
+                    <td className="p-4 font-semibold">{user.full_name}</td>
+                    <td className="p-4">{user.email}</td>
                     <td className="p-4">
                       <span className="rounded-lg bg-orange-50 px-3 py-1 text-xs font-bold text-orange-600">
-                        {user.role || "user"}
+                        {user.role}
                       </span>
                     </td>
                   </tr>

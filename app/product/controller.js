@@ -1,104 +1,59 @@
-const path = require('path');
-const fs = require('fs');
-const config = require('../config');
 const Product = require('./model');
 const Category = require('../category/model');
 const Tag = require('../tag/model');
+const {
+    deleteProductImage,
+    removeTemporaryUpload,
+    uploadProductImage
+} = require('./image-storage');
 
-const deleteProductImage = (imageUrl) => {
-    if (!imageUrl) return;
+const resolveReferences = async (input) => {
+    let payload = { ...input };
 
-    const normalizedImage = imageUrl.replace(/^\/+/, '');
-    const candidatePaths = new Set([
-        path.join(config.rootPath, 'public', 'images', normalizedImage),
-        path.join(config.rootPath, 'public', 'images', 'products', path.basename(normalizedImage))
-    ]);
-
-    if (normalizedImage.startsWith('products/')) {
-        candidatePaths.add(
-            path.join(config.rootPath, 'public', 'images', normalizedImage.replace(/^products\//, ''))
-        );
+    if (payload.category) {
+        const category = await Category.findOne({
+            name: { $regex: payload.category, $options: 'i' }
+        });
+        if (category) {
+            payload.category = category._id;
+        } else {
+            delete payload.category;
+        }
     }
 
-    candidatePaths.forEach((filePath) => {
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            console.log('Foto lama berhasil dihapus:', filePath);
+    if (payload.tags && payload.tags.length > 0) {
+        const tagNames = Array.isArray(payload.tags) ? payload.tags : [payload.tags];
+        const tags = await Tag.find({ name: { $in: tagNames } });
+        if (tags.length) {
+            payload.tags = tags.map((tag) => tag._id);
+        } else {
+            delete payload.tags;
         }
-    });
+    }
+
+    return payload;
 };
 
-
 const store = async (req, res, next) => {
+    let imageUrl;
+
     try {
-        let payload = req.body;
+        const payload = await resolveReferences(req.body);
+        if (req.file) imageUrl = await uploadProductImage(req.file);
 
-
-        //update karena relasi kategori
-        if (payload.category) {
-            let category =
-            await Category.findOne({ name: { $regex: payload.category, $options: 'i' } });
-            if (category) {
-                payload = { ...payload, category: category._id };
-            } else {
-                delete payload.category;
-            }
+        let product;
+        try {
+            product = new Product({
+                ...payload,
+                ...(imageUrl ? { image_url: imageUrl } : {})
+            });
+            await product.save();
+        } catch (err) {
+            if (imageUrl) await deleteProductImage(imageUrl);
+            throw err;
         }
 
-
-         //update karena relasi tags
-        if (payload.tags && payload.tags.length > 0) {
-            let tags =
-            await Tag
-            .find({ name: {$in: payload.tags} });
-            if (tags.length) {
-                payload = { ...payload, tags: tags.map(tag => tag._id) };
-            } else {
-                delete payload.tags;
-            }
-        }
-
-
-        if (req.file) {
-            let tmp_path = req.file.path;
-            let originalExt = req.file.originalname.split('.')[req.file.originalname.split('.').length - 1];
-            let filename = req.file.filename + '.' + originalExt;
-            let target_path = path.resolve(config.rootPath, `public/images/${filename}`);
-
-            const src = fs.createReadStream(tmp_path);
-            const dest = fs.createWriteStream(target_path);
-            src.pipe(dest);
-
-            src.on('finish', async () => {
-                try {
-                    let product = new Product({ ...payload, image_url: filename });
-                    await product.save();
-                    return res.json(product);
-
-
-                    } catch (err) {
-                        fs.unlinkSync(target_path);
-                        if (err && err.name === 'ValidationError') {
-                            return res.json({
-                                error: 1,
-                                message: err.message,
-                                fields: err.errors
-                            });
-                        }
-
-                        next(err);
-                    }
-                });
-
-                src.on('error', async () => {
-                    next(err);
-                });
-
-            } else {
-                let product = new Product(payload);
-                await product.save();
-                return res.json(product);
-            }
+        return res.json(product);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
             return res.json({
@@ -108,93 +63,58 @@ const store = async (req, res, next) => {
             });
         }
 
-        next(err);
+        return next(err);
     }
-}
-
-
+};
 
 const update = async (req, res, next) => {
+    let imageUrl;
+
     try {
-        let payload = req.body;
-        let { id } = req.params;
+        const payload = await resolveReferences(req.body);
+        const existingProduct = await Product.findById(req.params.id);
 
-        //update karena relasi kategori
-         if (payload.category) {
-            let category =
-            await Category.findOne({ name: { $regex: payload.category, $options: 'i' } });
-            if (category) {
-                payload = { ...payload, category: category._id };
-            } else {
-                delete payload.category;
-            }
+        if (!existingProduct) {
+            if (req.file) await removeTemporaryUpload(req.file.path);
+            return res.status(404).json({
+                error: 1,
+                message: 'Product tidak ditemukan'
+            });
         }
 
-          //update karena relasi tags
-        if (payload.tags && payload.tags.length > 0) {
-            let tags =
-            await Tag
-            .find({ name: {$in: payload.tags} });
-            if (tags.length) {
-                payload = { ...payload, tags: tags.map(tag => tag._id) };
-            } else {
-                delete payload.tags;
-            }
-        }
+        if (req.file) imageUrl = await uploadProductImage(req.file);
 
-
-        if (req.file) {
-            let tmp_path = req.file.path;
-            let originalExt = req.file.originalname.split('.')[req.file.originalname.split('.').length - 1];
-            let filename = req.file.filename + '.' + originalExt;
-            let target_path = path.resolve(config.rootPath, `public/images/${filename}`);
-
-            const src = fs.createReadStream(tmp_path);
-            const dest = fs.createWriteStream(target_path);
-            src.pipe(dest);
-
-            src.on('end', async () => {
-                try {
-
-                    let product = await Product.findById(id);
-
-                    if (product && product.image_url) {
-                        deleteProductImage(product.image_url);
-                    }
-
-                    payload.image_url = filename;
-                    product = await Product.findByIdAndUpdate(id, payload, { 
-                        new: true,
-                        runValidators: true
-                    });
-                    return res.json(product);
-
-
-                    } catch (err) {
-                        fs.unlinkSync(target_path);
-                        if (err && err.name === 'ValidationError') {
-                            return res.json({
-                                error: 1,
-                                message: err.message,
-                                fields: err.errors
-                            });
-                        }
-
-                        next(err);
-                    }
-                });
-
-                src.on('error', async () => {
-                    next(err);
-                });
-
-            } else {
-                 let product = await Product.findByIdAndUpdate(id, payload, { 
+        let product;
+        try {
+            product = await Product.findByIdAndUpdate(
+                req.params.id,
+                {
+                    ...payload,
+                    ...(imageUrl ? { image_url: imageUrl } : {})
+                },
+                {
                     new: true,
                     runValidators: true
-                    });
-                return res.json(product);
-            }
+                }
+            );
+        } catch (err) {
+            if (imageUrl) await deleteProductImage(imageUrl);
+            throw err;
+        }
+
+        if (!product) {
+            if (imageUrl) await deleteProductImage(imageUrl);
+            return res.status(404).json({
+                error: 1,
+                message: 'Product tidak ditemukan'
+            });
+        }
+
+        if (imageUrl && existingProduct.image_url) {
+            await deleteProductImage(existingProduct.image_url);
+        }
+
+        return res.json(product);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
             return res.json({
@@ -204,63 +124,58 @@ const update = async (req, res, next) => {
             });
         }
 
-        next(err);
+        return next(err);
     }
-}
-
-
+};
 
 const index = async (req, res, next) => {
     try {
-
-        //filter, Count, dan pagination
-        let { skip = 0, limit = 10, q = '', category = '', tags = [] } = req.query;
-
+        const { skip = 0, limit = 10, q = '', category = '', tags = [] } = req.query;
         let criteria = {};
 
         if (q.length) {
             criteria = {
-                 ...criteria,
-                  name: { $regex: q, $options: 'i' } 
-                }
+                ...criteria,
+                name: { $regex: q, $options: 'i' }
+            };
         }
-    
+
         if (category.length) {
-            let categoryResult = await Category.findOne({
+            const categoryResult = await Category.findOne({
                 name: { $regex: category, $options: 'i' }
             });
 
             if (categoryResult) {
-                criteria = { ...criteria, category: categoryResult._id }
+                criteria = { ...criteria, category: categoryResult._id };
             }
         }
 
         if (tags.length) {
-            let tagsResult = await Tag.find({name: { $in: tags } });
+            const tagsResult = await Tag.find({ name: { $in: tags } });
 
             if (tagsResult.length > 0) {
-                criteria = { ...criteria, tags: { $in: tagsResult.map(tag => tag._id) } }
+                criteria = {
+                    ...criteria,
+                    tags: { $in: tagsResult.map((tag) => tag._id) }
+                };
             }
         }
-        //untuk tampilan Count total data yang ada di database, tidak hanya data yang ditampilkan
-        let count = await Product.find().countDocuments(criteria);
-        
 
-        let product = await Product
-        .find(criteria)
-        .skip(parseInt(skip))
-        .limit(parseInt(limit))
-        .populate('category')
-        .populate('tags');
+        const count = await Product.countDocuments(criteria);
+        const products = await Product.find(criteria)
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .populate('category')
+            .populate('tags');
+
         return res.json({
-            data: product,
+            data: products,
             count
         });
     } catch (err) {
-        next(err);
+        return next(err);
     }
-}
-
+};
 
 const destroy = async (req, res, next) => {
     try {
@@ -273,10 +188,7 @@ const destroy = async (req, res, next) => {
             });
         }
 
-        if (product.image_url) {
-            deleteProductImage(product.image_url);
-        }
-
+        await deleteProductImage(product.image_url);
         await Product.findByIdAndDelete(req.params.id);
 
         return res.json({
@@ -284,15 +196,13 @@ const destroy = async (req, res, next) => {
             data: product
         });
     } catch (err) {
-        next(err);
+        return next(err);
     }
-}
-
+};
 
 module.exports = {
     store,
     index,
     update,
     destroy
-
-}
+};
