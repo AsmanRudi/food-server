@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AdminRoute from "./components/common/AdminRoute";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
+import ManageProducts from "./pages/admin/ManageProducts";
+import ManageUsers from "./pages/admin/ManageUsers";
 import AdminOrders from "./pages/admin/Orders";
 import Transfers from "./pages/admin/Transfers";
 import Cart from "./pages/Cart";
@@ -35,6 +37,8 @@ const App = () => (
         <Route path="/admin" element={<Navigate to="/admin/orders" replace />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/transfers" element={<Transfers />} />
+        <Route path="/admin/products" element={<ManageProducts />} />
+        <Route path="/admin/users" element={<ManageUsers />} />
       </Route>
     </Route>
   </Routes>
