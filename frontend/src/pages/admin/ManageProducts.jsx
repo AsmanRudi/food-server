@@ -84,6 +84,7 @@ export default function ManageProducts() {
       data.append("description", form.description);
       data.append("price", String(Number(form.price)));
       data.append("stock", String(Number(form.stock)));
+      data.append("image", imageFile);
 
       // Kirim gambar hanya jika pengguna memilih gambar baru.
       if (imageFile) {
@@ -234,13 +235,20 @@ export default function ManageProducts() {
                     <td className="p-4">
                      {product.image_url ? (
                         <img
-                             src={product.image_url}
+                            src={
+                             product.image_url.startsWith("http")
+                            ? product.image_url
+                            : `${import.meta.env.VITE_API_URL}${product.image_url.startsWith("/") ? "" : "/"}${product.image_url}`
+                         }
                              alt={product.name}
-                             className="h-12 w-12 rounded-lg object-cover"
+                            className="h-12 w-12 rounded-lg object-cover"
+                            onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                             }}
                          />
-                      ) : (
-    <span className="text-slate-400">Belum ada gambar</span>
-                         )}
+                            ) : (
+                            <span className="text-slate-400">Belum ada gambar</span>
+                        )}
                     </td>
 
                         <td className="p-4">
@@ -271,7 +279,7 @@ export default function ManageProducts() {
                 ))}
                 {filteredProducts.length === 0 && (
                   <tr>
-                    <td colSpan="3" className="p-8 text-center text-slate-500">
+                    <td colSpan="5" className="p-8 text-center text-slate-500">
                       Produk tidak ditemukan.
                     </td>
                   </tr>
