@@ -72,15 +72,37 @@ app.use(function(req, res, next) {
   next(createError(404));
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+app.use(function (err, req, res, next) {
+  console.error('Application error:', err.stack || err);
+
+  res.locals.message = err.message;
+  res.locals.error =
+    req.app.get('env') === 'development' ? err : {};
+
+  const status = err.status || err.statusCode || 500;
+
+  if (req.path.startsWith('/api') || req.path.startsWith('/auth')) {
+    return res.status(status).json({
+      error: 1,
+      message:
+        req.app.get('env') === 'development'
+          ? err.message
+          : 'Internal Server Error',
+    });
+  }
+
+  return res.status(status).render('error', function (renderErr, html) {
+    if (renderErr) {
+      console.error('Error rendering error.pug:', renderErr.message);
+      return res.status(500).send('Internal Server Error');
+    }
+
+    return res.send(html);
+  });
 });
+
+module.exports = app;
+g
 
 module.exports = app;
