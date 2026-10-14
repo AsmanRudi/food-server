@@ -11,7 +11,7 @@ router.post(
 
 router.get(
     '/orders',
-    police_check('view', 'Order'),
+    police_check('read', 'Order'),
     orderController.index
 );
 

@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 process.env.SECRET_KEY = 'test-only-secret-key-long-enough-for-jwt';
+const { subject } = require('@casl/ability');
 
 const CartItem = require('../app/cart-item/model');
 const DeliveryAddress = require('../app/DeliveryAddress/model');
@@ -9,6 +10,7 @@ const Order = require('../app/order/model');
 const OrderItem = require('../app/order-item/model');
 const Product = require('../app/product/model');
 const orderController = require('../app/order/controller');
+const { policyfor } = require('../utils');
 
 test('order creation only accepts an address owned by the requesting user', async () => {
   const originalCartFind = CartItem.find;
@@ -20,6 +22,7 @@ test('order creation only accepts an address owned by the requesting user', asyn
   CartItem.find = () => ({
     populate: async () => [{ product: 'product-1', qty: 1 }]
   });
+
   DeliveryAddress.findOne = async (query) => {
     addressQuery = query;
     return null;
@@ -47,6 +50,53 @@ test('order creation only accepts an address owned by the requesting user', asyn
   } finally {
     CartItem.find = originalCartFind;
     DeliveryAddress.findOne = originalAddressFindOne;
+  }
+});
+
+test('users can read their own orders and the listing is scoped to the logged-in user', async () => {
+  const originals = {
+    countDocuments: Order.countDocuments,
+    find: Order.find
+  };
+  const user = { _id: 'user-1', role: 'user' };
+  const order = {
+    _id: 'order-1',
+    status: 'in_delivery',
+    toJSON: () => ({ _id: 'order-1', status: 'in_delivery' })
+  };
+  let countFilter;
+  let findFilter;
+  let responseBody;
+
+  Order.countDocuments = async (filter) => {
+    countFilter = filter;
+    return 1;
+  };
+  Order.find = (filter) => {
+    findFilter = filter;
+    return {
+      skip() { return this; },
+      limit() { return this; },
+      populate() { return this; },
+      sort: async () => [order]
+    };
+  };
+
+  try {
+    await orderController.index(
+      { user, query: {} },
+      { json(payload) { responseBody = payload; return payload; } },
+      (error) => { throw error; }
+    );
+
+    assert.deepEqual(countFilter, { user: user._id });
+    assert.deepEqual(findFilter, { user: user._id });
+    assert.equal(responseBody.data[0].status, 'in_delivery');
+    assert.equal(policyfor(user).can('read', subject('Order', { user_id: 'user-1' })), true);
+    assert.equal(policyfor(user).can('read', subject('Order', { user_id: 'user-2' })), false);
+  } finally {
+    Order.countDocuments = originals.countDocuments;
+    Order.find = originals.find;
   }
 });
 

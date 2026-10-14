@@ -26,17 +26,31 @@ const Orders = () => {
 
   const [loading, setLoading] =
     useState(true);
+  const [loadError, setLoadError] =
+    useState("");
 
   useEffect(() => {
+    let active = true;
+
     getOrders()
-      .then((result) =>
-        setOrders(
-          result.data || []
-        )
-      )
-      .finally(() =>
-        setLoading(false)
-      );
+      .then((result) => {
+        if (!active) return;
+        setOrders(result.data || []);
+        setLoadError("");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setLoadError(
+          error.response?.data?.message || "Gagal memuat pesanan. Silakan coba lagi."
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -53,6 +67,14 @@ const Orders = () => {
         )}
 
         {!loading &&
+          loadError && (
+            <div role="alert" className="rounded-2xl bg-red-50 p-6 text-red-700">
+              {loadError}
+            </div>
+          )}
+
+        {!loading &&
+          !loadError &&
           !orders.length && (
             <div className="rounded-2xl bg-white p-10 text-center">
               Belum ada pesanan.
@@ -101,6 +123,7 @@ const Orders = () => {
                 </div>
 
                 <span className="rounded-full bg-orange-50 px-3 py-1 text-sm font-semibold text-orange-600">
+                  Status:{" "}
                   {
                     statusLabel[
                       order.status
