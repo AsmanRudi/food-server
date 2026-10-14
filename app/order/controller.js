@@ -3,10 +3,86 @@ const Invoice = require('../invoice/model');
 const CartItem = require('../cart-item/model');
 const DeliveryAddress = require('../DeliveryAddress/model');
 const OrderItem = require('../order-item/model');
+const Product = require('../product/model');
 const paymentService = require('../payment/service');
+
+class InsufficientStockError extends Error {
+    constructor(productName) {
+        super(`Stok produk "${productName}" tidak mencukupi`);
+        this.name = 'InsufficientStockError';
+    }
+}
+
+const reserveProductStock = async (items) => {
+    const quantitiesByProduct = new Map();
+
+    for (const item of items) {
+        const product = item.product;
+        if (!product?._id) {
+            throw new InsufficientStockError(item.name || 'Produk');
+        }
+
+        const quantity = Number(item.qty);
+        if (!Number.isSafeInteger(quantity) || quantity < 1) {
+            const error = new Error('Jumlah produk harus berupa bilangan bulat minimal 1');
+            error.name = 'InvalidQuantityError';
+            throw error;
+        }
+
+        const productId = String(product._id);
+        const entry = quantitiesByProduct.get(productId) || {
+            productId: product._id,
+            productName: product.name || item.name || 'Produk',
+            quantity: 0
+        };
+        entry.quantity += quantity;
+        if (!Number.isSafeInteger(entry.quantity)) {
+            const error = new Error('Jumlah produk melebihi batas yang diperbolehkan');
+            error.name = 'InvalidQuantityError';
+            throw error;
+        }
+        quantitiesByProduct.set(productId, entry);
+    }
+
+    const reservations = [];
+
+    try {
+        for (const entry of quantitiesByProduct.values()) {
+            const product = await Product.findOneAndUpdate(
+                {
+                    _id: entry.productId,
+                    stock: { $gte: entry.quantity }
+                },
+                { $inc: { stock: -entry.quantity } },
+                { new: true }
+            );
+
+            if (!product) {
+                throw new InsufficientStockError(entry.productName);
+            }
+
+            reservations.push(entry);
+        }
+    } catch (err) {
+        await restoreProductStock(reservations);
+        throw err;
+    }
+
+    return reservations;
+};
+
+const restoreProductStock = async (reservations) => {
+    for (const reservation of [...reservations].reverse()) {
+        await Product.updateOne(
+            { _id: reservation.productId },
+            { $inc: { stock: reservation.quantity } }
+        );
+    }
+};
 
 const store = async (req, res, next) => {
     let order;
+    let stockReservations = [];
     try {
         const {
             delivery_fee = 0,
@@ -36,6 +112,8 @@ const store = async (req, res, next) => {
         if (!address) {
             return res.status(404).json({ error: 1, message: 'Alamat pengiriman tidak ditemukan' });
         }
+
+        stockReservations = await reserveProductStock(items);
 
         order = new Order({
             status: payment_method === 'cod' ? 'processing' : 'waiting_payment',
@@ -75,20 +153,38 @@ const store = async (req, res, next) => {
 
         await invoice.save();
         await CartItem.deleteMany({ user: req.user._id });
+        stockReservations = [];
 
         return res.status(201).json({
             ...order.toJSON({ virtuals: true }),
             payment_url: paymentUrl
         });
     } catch (err) {
+        try {
+            await restoreProductStock(stockReservations);
+        } catch (restoreError) {
+            console.error('Failed to restore reserved product stock:', restoreError);
+            return next(restoreError);
+        }
+
         if (order?._id) {
-            await Promise.all([
-                OrderItem.deleteMany({ order: order._id }),
-                Invoice.deleteOne({ order: order._id }),
-                Order.deleteOne({ _id: order._id })
-            ]).catch((cleanupError) => {
+            try {
+                await Promise.all([
+                    OrderItem.deleteMany({ order: order._id }),
+                    Invoice.deleteOne({ order: order._id }),
+                    Order.deleteOne({ _id: order._id })
+                ]);
+            } catch (cleanupError) {
                 console.error('Failed to clean up incomplete order:', cleanupError);
-            });
+                return next(cleanupError);
+            }
+        }
+
+        if (err?.name === 'InsufficientStockError') {
+            return res.status(409).json({ error: 1, message: err.message });
+        }
+        if (err?.name === 'InvalidQuantityError') {
+            return res.status(400).json({ error: 1, message: err.message });
         }
 
         if (err?.name === 'ValidationError') {
