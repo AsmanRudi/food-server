@@ -7,6 +7,7 @@ import {
   getProducts,
   updateProduct,
 } from "../../services/product.service";
+import { getCategories } from "../../services/category.service";
 import { getImageUrl } from "../../utils/image";
 
 
@@ -15,10 +16,12 @@ const initialForm = {
   description: "",
   price: "",
   stock: "",
+  category: "",
 };
 
 export default function ManageProducts() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
@@ -26,6 +29,7 @@ export default function ManageProducts() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [categoryError, setCategoryError] = useState("");
   const [success, setSuccess] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -49,6 +53,29 @@ export default function ManageProducts() {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    getCategories()
+      .then((result) => {
+        if (active) {
+          setCategories(Array.isArray(result) ? result : result.data || []);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setCategoryError(
+            err.response?.data?.message ||
+              err.message ||
+              "Gagal memuat kategori."
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   function openAdd() {
     setEditingId(null);
     setForm(initialForm);
@@ -67,6 +94,7 @@ export default function ManageProducts() {
       description: product.description || "",
       price: String(product.price ?? ""),
       stock: String(product.stock ?? ""),
+      category: product.category?._id || product.category || "",
     });
 
     setImageFile(null);
@@ -90,6 +118,7 @@ export default function ManageProducts() {
       data.append("description", form.description);
       data.append("price", String(Number(form.price)));
       data.append("stock", String(Number(form.stock)));
+      data.append("category", form.category);
 
       if (imageFile) {
         data.append("image", imageFile);
@@ -190,6 +219,11 @@ export default function ManageProducts() {
       )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        {categoryError && (
+          <div role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {categoryError}
+          </div>
+        )}
         <div className="mb-5 flex flex-wrap gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 px-3">
             <Search size={18} className="text-slate-400" />
@@ -332,6 +366,31 @@ export default function ManageProducts() {
                     setForm({ ...form, description: event.target.value })
                   }
                 />
+              </label>
+
+              <label className="grid gap-2 text-sm font-semibold">
+                Kategori
+                <select
+                  required
+                  className="rounded-lg border bg-white p-3 font-normal"
+                  value={form.category}
+                  onChange={(event) =>
+                    setForm({ ...form, category: event.target.value })
+                  }
+                >
+                  <option value="">Pilih kategori</option>
+                  {categories.map((category) => (
+                    <option key={category._id} value={category._id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                {categories.length === 0 && (
+                  <span className="text-xs font-normal text-amber-700">
+                    Belum ada kategori. Buat kategori terlebih dahulu sebelum
+                    menyimpan produk.
+                  </span>
+                )}
               </label>
 
               <label className="grid gap-2 text-sm font-semibold">

@@ -137,3 +137,27 @@ test('admin cannot demote the last administrator', async () => {
     User.countDocuments = originalCountDocuments;
   }
 });
+
+test('saving an existing user does not treat their own email as a duplicate', async () => {
+  const originalCountDocuments = User.countDocuments;
+  const user = new User({
+    full_name: 'Existing User',
+    email: 'existing@example.com',
+    password: 'secret',
+    role: 'user'
+  });
+  user.isNew = false;
+  let query;
+  User.countDocuments = async (criteria) => {
+    query = criteria;
+    return 0;
+  };
+
+  try {
+    await user.validate();
+    assert.equal(query.email, 'existing@example.com');
+    assert.deepEqual(query._id, { $ne: user._id });
+  } finally {
+    User.countDocuments = originalCountDocuments;
+  }
+});

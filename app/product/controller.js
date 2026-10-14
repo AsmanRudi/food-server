@@ -1,6 +1,7 @@
 const Product = require('./model');
 const Category = require('../category/model');
 const Tag = require('../tag/model');
+const mongoose = require('mongoose');
 const {
     deleteProductImage,
     removeTemporaryUpload,
@@ -11,9 +12,11 @@ const resolveReferences = async (input) => {
     let payload = { ...input };
 
     if (payload.category) {
-        const category = await Category.findOne({
-            name: { $regex: payload.category, $options: 'i' }
-        });
+        const category = mongoose.isValidObjectId(payload.category)
+            ? await Category.findById(payload.category)
+            : await Category.findOne({
+                name: { $regex: payload.category, $options: 'i' }
+            });
         if (category) {
             payload.category = category._id;
         } else {
@@ -53,10 +56,10 @@ const store = async (req, res, next) => {
             throw err;
         }
 
-        return res.json(product);
+        return res.status(201).json(product);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -117,7 +120,7 @@ const update = async (req, res, next) => {
         return res.json(product);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors

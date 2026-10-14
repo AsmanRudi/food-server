@@ -19,6 +19,12 @@ const productSchema = new Schema({
         default: 0,
     },
 
+    stock: {
+        type: Number,
+        min: [0, 'Stok tidak boleh kurang dari 0'],
+        default: 0
+    },
+
     image_url: String,
 
     category: {

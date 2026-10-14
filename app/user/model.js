@@ -46,12 +46,10 @@ userSchema.path('email').validate(function (value) {
 
 userSchema.path('email').validate(async function (value) {
     try {
-        // (1) lakukan query untuk mencari user berdasarkan email
-        const count = await this.model('User').countDocuments({ email: value });
+        const criteria = { email: value };
+        if (this._id) criteria._id = { $ne: this._id };
 
-        // (2) kode ini mengindikasikan bahwa jika user ditemukan akan mengembalikan false, jika tidak ditemukan akan mengembalikan true
-        // jika false maka validasi gagal,
-        // jika true maka validasi berhasil
+        const count = await this.model('User').countDocuments(criteria);
         return !count;
     } catch (err) {
         throw err;
