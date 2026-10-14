@@ -21,6 +21,8 @@ var app = express();
 
 const db = require('./database');
 
+app.use(cors());
+
 app.use(async (req, res, next) => {
   try {
     await db.ready;
@@ -38,7 +40,6 @@ app.use(async (req, res, next) => {
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
-app.use(cors());
 app.use(decodeToken());
 app.use(logger('dev'));
 app.use(express.json());
