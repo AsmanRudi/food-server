@@ -7,7 +7,7 @@ import {
   getProducts,
   updateProduct,
 } from "../../services/product.service";
-import { getCategories } from "../../services/category.service";
+import { createCategory, getCategories } from "../../services/category.service";
 import { getImageUrl } from "../../utils/image";
 
 
@@ -30,6 +30,8 @@ export default function ManageProducts() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [categoryError, setCategoryError] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [savingCategory, setSavingCategory] = useState(false);
   const [success, setSuccess] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -50,7 +52,21 @@ export default function ManageProducts() {
   }
 
   useEffect(() => {
-    loadProducts();
+    let active = true;
+    getProducts({ limit: 100 })
+      .then((result) => {
+        if (active) setProducts(result.data || []);
+      })
+      .catch((err) => {
+        if (active) setError(err.message || "Gagal mengambil produk.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -155,6 +171,34 @@ export default function ManageProducts() {
     }
   }
 
+  async function handleAddCategory() {
+    const name = categoryName.trim();
+
+    if (name.length < 3 || name.length > 20) {
+      setCategoryError("Nama kategori harus terdiri dari 3 sampai 20 karakter.");
+      return;
+    }
+
+    setSavingCategory(true);
+    setCategoryError("");
+
+    try {
+      const category = await createCategory({ name });
+      setCategories((current) => [...current, category]);
+      setForm((current) => ({ ...current, category: category._id }));
+      setCategoryName("");
+      setSuccess(`Kategori "${category.name}" berhasil disimpan.`);
+    } catch (err) {
+      setCategoryError(
+        err.response?.data?.message ||
+          err.message ||
+          "Gagal menyimpan kategori."
+      );
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
   async function handleDelete(product) {
     if (!window.confirm(`Hapus produk "${product.name}"?`)) return;
 
@@ -219,11 +263,6 @@ export default function ManageProducts() {
       )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        {categoryError && (
-          <div role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-            {categoryError}
-          </div>
-        )}
         <div className="mb-5 flex flex-wrap gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 px-3">
             <Search size={18} className="text-slate-400" />
@@ -369,7 +408,7 @@ export default function ManageProducts() {
               </label>
 
               <label className="grid gap-2 text-sm font-semibold">
-                Kategori
+                Kategori Produk
                 <select
                   required
                   className="rounded-lg border bg-white p-3 font-normal"
@@ -385,13 +424,46 @@ export default function ManageProducts() {
                     </option>
                   ))}
                 </select>
-                {categories.length === 0 && (
-                  <span className="text-xs font-normal text-amber-700">
-                    Belum ada kategori. Buat kategori terlebih dahulu sebelum
-                    menyimpan produk.
-                  </span>
-                )}
               </label>
+
+              <div
+                className="grid gap-2 rounded-xl border border-dashed border-slate-300 p-3"
+              >
+                {categoryError && (
+                  <p role="alert" className="text-sm text-red-700">
+                    {categoryError}
+                  </p>
+                )}
+                <label
+                  htmlFor="new-product-category"
+                  className="text-sm font-semibold"
+                >
+                  Tambah kategori baru
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="new-product-category"
+                    value={categoryName}
+                    onChange={(event) => setCategoryName(event.target.value)}
+                    minLength={3}
+                    maxLength={20}
+                    placeholder="Nama kategori (3–20 karakter)"
+                    className="min-w-0 flex-1 rounded-lg border p-3 font-normal"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    disabled={savingCategory || !categoryName.trim()}
+                    className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    {savingCategory ? "Menyimpan..." : "Tambah"}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Kategori langsung disimpan ke database dan dipilih untuk
+                  produk ini.
+                </p>
+              </div>
 
               <label className="grid gap-2 text-sm font-semibold">
                 Harga (Rp)

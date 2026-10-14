@@ -8,6 +8,7 @@ import {
     Link,
     useNavigate,
 } from "react-router-dom";
+import { useEffect } from "react";
 
 import { toast } from "sonner";
 
@@ -16,6 +17,7 @@ import {
 } from "../store/cartStore";
 
 import {
+    getCart,
     updateCart,
 } from "../services/cart.service";
 
@@ -36,9 +38,31 @@ const Cart = () => {
     decrease,
     removeItem,
     getTotal,
+    setItems,
   } = useCartStore();
 
   const total = getTotal();
+
+  useEffect(() => {
+    let active = true;
+    getCart()
+      .then((result) => {
+        if (active && !useCartStore.getState().items.length) {
+          setItems(result);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          toast.error(
+            error.response?.data?.message || "Gagal memuat keranjang tersimpan"
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [setItems]);
 
   const saveCart = async () => {
     try {
@@ -54,11 +78,13 @@ const Cart = () => {
       toast.success(
         "Keranjang diperbarui"
       );
+      return true;
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
         "Gagal menyimpan keranjang"
       );
+      return false;
     }
   };
 
@@ -76,9 +102,17 @@ const Cart = () => {
             Yuk pilih makanan favoritmu.
           </p>
 
+          <button
+            type="button"
+            onClick={saveCart}
+            className="mt-6 rounded-xl border border-orange-500 px-5 py-3 font-bold text-orange-600"
+          >
+            Sinkronkan keranjang kosong
+          </button>
+
           <Link
             to="/products"
-            className="mt-6 inline-block rounded-xl bg-orange-500 px-6 py-3 font-bold text-white"
+            className="ml-3 mt-6 inline-block rounded-xl bg-orange-500 px-6 py-3 font-bold text-white"
           >
             Lihat Menu
           </Link>
@@ -230,8 +264,7 @@ const Cart = () => {
 
           <button
             onClick={async () => {
-              await saveCart();
-              navigate("/checkout");
+              if (await saveCart()) navigate("/checkout");
             }}
             className="mt-6 w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white hover:bg-orange-600"
           >

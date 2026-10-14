@@ -14,6 +14,10 @@ export const createTag = async (data) => {
     return response.data;
 };
 
-const updateTag = async (id, data) => {
-    
-}
+export const updateTag = async (id, data) => {
+    const response = await api.put(`/api/tags/${id}`, data);
+    if (response.data?.error) {
+        throw new Error(response.data.message || "Gagal memperbarui tag.");
+    }
+    return response.data;
+};

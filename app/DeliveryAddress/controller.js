@@ -6,10 +6,10 @@ const store = async (req, res, next) => {
         let user = req.user;
         let address = new DeliveryAddress({ ...payload, user: user._id });
         await address.save();
-        return res.json(address);
+        return res.status(201).json(address);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -22,14 +22,25 @@ const store = async (req, res, next) => {
 
 const update = async (req, res, next) => {
     try {
-        let { _id, ...payload } = req.body;
+        const payload = { ...req.body };
+        delete payload._id;
+        delete payload.user;
         let { id } = req.params;
 
-        let address = await DeliveryAddress.findByIdAndUpdate(id, payload, { new: true });
+        let address = await DeliveryAddress.findByIdAndUpdate(id, payload, {
+            new: true,
+            runValidators: true
+        });
+        if (!address) {
+            return res.status(404).json({
+                error: 1,
+                message: 'Alamat pengiriman tidak ditemukan'
+            });
+        }
         return res.json(address);
     } catch (err) {
         if (err && err.name == 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -44,10 +55,16 @@ const destroy = async (req, res, next) => {
     try {
         let { id } = req.params;
         let address = await DeliveryAddress.findByIdAndDelete(id);
+        if (!address) {
+            return res.status(404).json({
+                error: 1,
+                message: 'Alamat pengiriman tidak ditemukan'
+            });
+        }
         return res.json(address);
     } catch (err) {
         if (err && err.name == 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -66,12 +83,12 @@ const index = async (req, res, next) => {
             .find({ user: req.user._id })
             .skip(parseInt(skip))
             .limit(parseInt(limit))
-            .sort('-create');
+            .sort('-createdAt');
 
         return res.json({ data: addresses, count });
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -88,4 +105,3 @@ module.exports = {
     destroy,
     index
 };
-

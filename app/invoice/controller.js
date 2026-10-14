@@ -8,7 +8,7 @@ const show = async (req, res, next) => {
         const invoice = await Invoice
             .findOne({ order: req.params.order_id })
             .populate('order')
-            .populate('user');
+            .populate('user', '_id customer_id full_name email role createdAt');
 
         if (!invoice) {
             return res.status(404).json({ error: 1, message: 'Invoice not found' });
@@ -41,7 +41,8 @@ const pendingTransfers = async (req, res, next) => {
         const [count, invoices] = await Promise.all([
             Invoice.countDocuments(filter),
             Invoice.find(filter)
-                .populate('order user')
+                .populate('order')
+                .populate('user', '_id customer_id full_name email role createdAt')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)

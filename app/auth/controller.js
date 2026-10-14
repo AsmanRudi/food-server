@@ -17,7 +17,7 @@ const register = async (req, res, next) => {
 
         await user.save();
 
-        return res.json({
+        return res.status(201).json({
             _id: user._id,
             customer_id: user.customer_id,
             full_name: user.full_name,
@@ -26,7 +26,7 @@ const register = async (req, res, next) => {
         });
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors

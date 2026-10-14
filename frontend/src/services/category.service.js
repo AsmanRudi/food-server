@@ -11,7 +11,10 @@ export const createCategory = async (data) => {
     const response = await api.post(
         "/api/categories",
         data
-    ); 
+    );
+    if (response.data?.error) {
+        throw new Error(response.data.message || "Gagal menambahkan kategori.");
+    }
     return response.data;
 }
 

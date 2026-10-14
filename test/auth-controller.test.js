@@ -15,6 +15,7 @@ test('register ignores client-supplied privileged fields', async () => {
   const originalSave = User.prototype.save;
   let savedUser;
   let response;
+  let statusCode;
   User.prototype.save = async function () {
     savedUser = this;
     return this;
@@ -31,12 +32,16 @@ test('register ignores client-supplied privileged fields', async () => {
           token: ['attacker-token']
         }
       },
-      { json: (payload) => { response = payload; return payload; } },
+      {
+        status(code) { statusCode = code; return this; },
+        json(payload) { response = payload; return payload; }
+      },
       (error) => { throw error || new Error('next should not be called'); }
     );
 
     assert.equal(savedUser.role, 'user');
     assert.deepEqual(savedUser.token, []);
+    assert.equal(statusCode, 201);
     assert.equal(response.password, undefined);
     assert.equal(response.token, undefined);
   } finally {

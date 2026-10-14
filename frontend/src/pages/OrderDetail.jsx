@@ -43,45 +43,50 @@ const OrderDetail = () => {
 
   const [paymentOptions, setPaymentOptions] = useState(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loadedOrderId, setLoadedOrderId] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const loading = loadedOrderId !== id;
 
   useEffect(() => {
-    load();
-    getPaymentOptions().then(setPaymentOptions).catch(() => {});
-  }, [id]);
+    let active = true;
 
-  const load = async () => {
-    try {
-      const orders =
-        await getOrders({
-          limit: 100,
-        });
-
-      const found =
-        orders.data?.find(
-          (item) =>
-            String(item._id) ===
-            String(id)
+    Promise.all([
+      getOrders({ limit: 100 }),
+      getInvoice(id).catch(() => null),
+    ])
+      .then(([orders, invoiceData]) => {
+        if (!active) return;
+        const found = orders.data?.find(
+          (item) => String(item._id) === String(id)
         );
-
-      setOrder(found || null);
-
-      try {
-        const invoiceData =
-          await getInvoice(id);
-
-        setInvoice(
-          invoiceData
-        );
-      } catch {
+        setLoadError("");
+        setOrder(found || null);
+        setInvoice(invoiceData);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setOrder(null);
         setInvoice(null);
-      }
+        setLoadError(
+          error.response?.data?.message || "Gagal memuat detail pesanan."
+        );
+      })
+      .finally(() => {
+        if (active) setLoadedOrderId(id);
+      });
 
-    } finally {
-      setLoading(false);
-    }
-  };
+    getPaymentOptions()
+      .then((options) => {
+        if (active) setPaymentOptions(options);
+      })
+      .catch(() => {
+        if (active) setPaymentOptions(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   if (loading) {
     return (
@@ -95,7 +100,7 @@ const OrderDetail = () => {
     return (
       <div className="mx-auto max-w-5xl px-4 py-20 text-center">
         <h1 className="text-2xl font-black">
-          Pesanan tidak ditemukan
+          {loadError || "Pesanan tidak ditemukan"}
         </h1>
 
         <Link

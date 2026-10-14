@@ -1,6 +1,6 @@
 import api from "./api";
 
-export const getAddresses = async (data) => {
+export const getAddresses = async () => {
     const response = await api.get(
         "/api/delivery-addresses"
     );

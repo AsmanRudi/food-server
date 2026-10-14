@@ -5,10 +5,10 @@ const store = async (req, res, next) => {
         const payload = req.body;
         let tag = new Tag(payload);
         await tag.save();
-        return res.json(tag);
+        return res.status(201).json(tag);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -23,10 +23,16 @@ const update = async (req, res, next) => {
     try {
         let payload = req.body;
         let tag = await Tag.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
+        if (!tag) {
+            return res.status(404).json({
+                error: 1,
+                message: 'Tag tidak ditemukan'
+            });
+        }
         return res.json(tag);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -40,10 +46,16 @@ const update = async (req, res, next) => {
 const destroy = async (req, res, next) => {
     try {
         let tag = await Tag.findByIdAndDelete(req.params.id);
+        if (!tag) {
+            return res.status(404).json({
+                error: 1,
+                message: 'Tag tidak ditemukan'
+            });
+        }
         return res.json(tag);
     } catch (err) {
         if (err && err.name === 'ValidationError') {
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors
@@ -60,15 +72,7 @@ const index = async (req, res, next) => {
         let tag = await Tag.find();
         return res.json(tag);
     } catch (err) {
-        if (err && err.name === 'ValidationError') {
-            return res.json({
-                error: 1,
-                message: err.message,
-                fields: err.errors
-            });
-        }
-
-        next(err);
+        return next(err);
     }   
 }
 

@@ -82,7 +82,18 @@ const Checkout = () => {
   const subtotal = getTotal();
 
   useEffect(() => {
-    loadAddresses();
+    let active = true;
+    getAddresses()
+      .then((result) => {
+        if (active) setAddresses(result.data || []);
+      })
+      .catch(() => {
+        if (active) toast.error("Gagal mengambil alamat");
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -90,21 +101,6 @@ const Checkout = () => {
       .then(setPaymentOptions)
       .catch(() => toast.error("Gagal mengambil metode pembayaran"));
   }, []);
-
-  const loadAddresses = async () => {
-    try {
-      const result =
-        await getAddresses();
-
-      setAddresses(
-        result.data || []
-      );
-    } catch (error) {
-      toast.error(
-        "Gagal mengambil alamat"
-      );
-    }
-  };
 
   const handleCreateAddress =
     async (e) => {

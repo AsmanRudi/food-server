@@ -17,7 +17,7 @@ router.get(
 
 router.get(
     '/admin/orders',
-    police_check('view', 'Order'),
+    police_check('manage', 'Order'),
     orderController.adminIndex
 );
 

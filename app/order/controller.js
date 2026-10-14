@@ -29,7 +29,10 @@ const store = async (req, res, next) => {
             return res.status(400).json({ error: 1, message: 'Keranjang masih kosong' });
         }
 
-        const address = await DeliveryAddress.findById(delivery_address);
+        const address = await DeliveryAddress.findOne({
+            _id: delivery_address,
+            user: req.user._id
+        });
         if (!address) {
             return res.status(404).json({ error: 1, message: 'Alamat pengiriman tidak ditemukan' });
         }
@@ -83,7 +86,9 @@ const store = async (req, res, next) => {
                 OrderItem.deleteMany({ order: order._id }),
                 Invoice.deleteOne({ order: order._id }),
                 Order.deleteOne({ _id: order._id })
-            ]).catch(() => {});
+            ]).catch((cleanupError) => {
+                console.error('Failed to clean up incomplete order:', cleanupError);
+            });
         }
 
         if (err?.name === 'ValidationError') {

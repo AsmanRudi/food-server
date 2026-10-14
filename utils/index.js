@@ -39,7 +39,6 @@ const definePolicy = (user, can) => {
     }
 
     if (role === 'user') {
-        can('view', 'Order');
         can('create', 'Order');
         can('read', 'Order', { user_id: currentUser._id });
         can('update', 'User', { _id: currentUser._id });

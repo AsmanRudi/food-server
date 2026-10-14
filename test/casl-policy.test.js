@@ -44,3 +44,21 @@ test('police_check blocks update when the resource belongs to another user', asy
 
   assert.equal(statusCode, 403);
 });
+
+test('ordinary users cannot access the admin order listing', async () => {
+  const user = { _id: 'u-1', role: 'user' };
+  let statusCode;
+  const middleware = police_check('manage', 'Order');
+
+  await middleware(
+    { user },
+    {
+      status(code) { statusCode = code; return this; },
+      json() { return this; }
+    },
+    () => { throw new Error('ordinary users must not reach the admin listing'); }
+  );
+
+  assert.equal(statusCode, 403);
+  assert.equal(policyfor({ _id: 'admin-1', role: 'admin' }).can('manage', 'Order'), true);
+});
