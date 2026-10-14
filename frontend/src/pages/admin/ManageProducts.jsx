@@ -2,10 +2,10 @@
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-    createProduct,
-    deleteProduct,
-    getProducts,
-    updateProduct,
+  createProduct,
+  deleteProduct,
+  getProducts,
+  updateProduct,
 } from "../../services/product.service";
 import { getImageUrl } from "../../utils/image";
 
@@ -90,17 +90,23 @@ export default function ManageProducts() {
       data.append("description", form.description);
       data.append("price", String(Number(form.price)));
       data.append("stock", String(Number(form.stock)));
+
       if (imageFile) {
         data.append("image", imageFile);
       }
 
       if (editingId) {
         await updateProduct(editingId, data);
-        setSuccess("Produk berhasil diperbarui.");
       } else { 
         await createProduct(data);
-        setSuccess("Produk berhasil ditambahkan.");
       }
+
+      // Dijalankan setelah API berhasil
+      setSuccess(
+        editingId
+          ? "Produk berhasil diperbaharui."
+          : "Produk berhasil disimpan ke Database."
+        );
 
       setShowForm(false);
       setForm(initialForm);
