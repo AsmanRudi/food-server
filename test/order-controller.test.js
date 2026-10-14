@@ -56,7 +56,8 @@ test('order creation only accepts an address owned by the requesting user', asyn
 test('users can read their own orders and the listing is scoped to the logged-in user', async () => {
   const originals = {
     countDocuments: Order.countDocuments,
-    find: Order.find
+    find: Order.find,
+    invoiceDistinct: Invoice.distinct
   };
   const user = { _id: 'user-1', role: 'user' };
   const order = {
@@ -68,6 +69,7 @@ test('users can read their own orders and the listing is scoped to the logged-in
   let findFilter;
   let responseBody;
 
+  Invoice.distinct = async () => [];
   Order.countDocuments = async (filter) => {
     countFilter = filter;
     return 1;
@@ -97,6 +99,66 @@ test('users can read their own orders and the listing is scoped to the logged-in
   } finally {
     Order.countDocuments = originals.countDocuments;
     Order.find = originals.find;
+    Invoice.distinct = originals.invoiceDistinct;
+  }
+});
+
+test('users can see legacy orders linked to their own invoices', async () => {
+  const originals = {
+    countDocuments: Order.countDocuments,
+    find: Order.find,
+    invoiceDistinct: Invoice.distinct
+  };
+  const userId = 'user-1';
+  const invoiceOrderIds = ['order-legacy-1'];
+  const order = {
+    _id: invoiceOrderIds[0],
+    status: 'delivered',
+    toJSON: () => ({ _id: invoiceOrderIds[0], status: 'delivered' })
+  };
+  let countFilter;
+  let findFilter;
+  let responseBody;
+
+  Invoice.distinct = async (field, filter) => {
+    assert.equal(field, 'order');
+    assert.deepEqual(filter, { user: userId, order: { $ne: null } });
+    return invoiceOrderIds;
+  };
+  Order.countDocuments = async (filter) => {
+    countFilter = filter;
+    return 1;
+  };
+  Order.find = (filter) => {
+    findFilter = filter;
+    return {
+      skip() { return this; },
+      limit() { return this; },
+      populate() { return this; },
+      sort: async () => [order]
+    };
+  };
+
+  try {
+    await orderController.index(
+      { user: { _id: userId }, query: {} },
+      { json(payload) { responseBody = payload; return payload; } },
+      (error) => { throw error; }
+    );
+
+    const expectedFilter = {
+      $or: [
+        { user: userId },
+        { _id: { $in: invoiceOrderIds } }
+      ]
+    };
+    assert.deepEqual(countFilter, expectedFilter);
+    assert.deepEqual(findFilter, expectedFilter);
+    assert.deepEqual(responseBody.data, [order.toJSON({ virtuals: true })]);
+  } finally {
+    Order.countDocuments = originals.countDocuments;
+    Order.find = originals.find;
+    Invoice.distinct = originals.invoiceDistinct;
   }
 });
 

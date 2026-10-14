@@ -197,7 +197,18 @@ const store = async (req, res, next) => {
 const index = async (req, res, next) => {
     try {
         const { skip = 0, limit = 10 } = req.query;
-        const filter = { user: req.user._id };
+        const invoiceOrderIds = await Invoice.distinct('order', {
+            user: req.user._id,
+            order: { $ne: null }
+        });
+        const filter = invoiceOrderIds.length
+            ? {
+                $or: [
+                    { user: req.user._id },
+                    { _id: { $in: invoiceOrderIds } }
+                ]
+            }
+            : { user: req.user._id };
         const [count, orders] = await Promise.all([
             Order.countDocuments(filter),
             Order.find(filter)
